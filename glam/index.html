@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Yes Madam — Beauty Parlour (mobile)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    :root{--bg:#fff8fb;--card:#fff;--accent:#ff3b8a;--muted:#8a8a8f;--radius:18px;font-family:Inter,system-ui,Roboto,Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#fff8fb 0%, #fff 60%);} 
+    .app{max-width:420px;margin:0 auto;box-shadow:0 10px 30px rgba(0,0,0,0.06);min-height:100vh}
+    header{padding:18px 16px;background:transparent;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:700;color:var(--accent);font-size:20px}
+    main{padding:8px 16px 90px}
+    .card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(20,20,20,0.04)}
+    .form-row{display:flex;flex-direction:column;gap:8px}
+    input[type=email],input[type=password],input[type=text],textarea{width:100%;padding:12px;border-radius:12px;border:1px solid #f1e6ee;background:transparent}
+    button.primary{width:100%;padding:12px;border-radius:12px;border:0;background:var(--accent);color:white;font-weight:600}
+    .link-like{color:var(--accent);font-weight:600;cursor:pointer;background:none;border:0}
+    .avatar{width:70px;height:70px;border-radius:18px;background:linear-gradient(135deg,#ffd7e6,#fff);display:flex;align-items:center;justify-content:center;font-weight:700}
+    .small{font-size:13px;color:var(--muted)}
+    .product{display:flex;gap:10px;align-items:center}
+    .product img{width:64px;height:64px;border-radius:12px;object-fit:cover}
+    footer.bottom-nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:420px;padding:10px;background:transparent}
+    .nav-row{display:flex;justify-content:space-between;gap:8px}
+    .nav-btn{flex:1;padding:12px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;gap:8px}
+    .badge{background:linear-gradient(90deg,#ffeef8,#fff);color:var(--accent);padding:6px 8px;border-radius:999px;font-weight:600;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar" style="width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg,#ffd7e6,#ffecf6)">YM</div>
+        <div>
+          <div class="brand">Yes Madam</div>
+          <div class="small">Beauty & Salon — Mobile</div>
+        </div>
+      </div>
+    </header>
+    <main id="screen"></main>
+    <footer class="bottom-nav">
+      <div class="nav-row">
+        <button class="nav-btn" id="nav-home"><span class="material-icons">home</span></button>
+        <button class="nav-btn" id="nav-cart"><span class="material-icons">shopping_cart</span></button>
+        <button class="nav-btn" id="nav-admin"><span class="material-icons">settings</span></button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase Realtime + Auth (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <script>
+    // NOTE: Rewrote JS to ES5-compatible syntax (no const/let/arrow/async) to avoid "Unexpected token 'const'" on older WebViews.
+
+    var OWNER_EMAIL = 'sunnymavale@gmail.com';
+    var firebaseConfig = {
+      apiKey: "AIzaSyDlFYwKIcsI2yNL6iaGJINJKEB_CrRZ_iI",
+      authDomain: "chatme-a3ef7.firebaseapp.com",
+      databaseURL: "https://chatme-a3ef7-default-rtdb.firebaseio.com",
+      projectId: "chatme-a3ef7",
+      storageBucket: "chatme-a3ef7.firebasestorage.app",
+      messagingSenderId: "47843223818",
+      appId: "1:47843223818:web:e08c02c6e52bce2c51b2f3"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var auth = firebase.auth();
+    var db = firebase.database();
+    var storage = firebase.storage();
+
+    var screen = document.getElementById('screen');
+    var currentUser = null; var currentProfile = null;
+
+    function toast(msg){
+      var t = document.createElement('div');
+      t.textContent = msg;
+      t.style.position = 'fixed';
+      t.style.left = '50%';
+      t.style.transform = 'translateX(-50%)';
+      t.style.bottom = '110px';
+      t.style.background = 'rgba(0,0,0,0.8)';
+      t.style.color = '#fff';
+      t.style.padding = '10px 14px';
+      t.style.borderRadius = '12px';
+      t.style.zIndex = 9999;
+      document.body.appendChild(t);
+      setTimeout(function(){ try{ document.body.removeChild(t);}catch(e){} },3000);
+    }
+
+    // Auth listener
+    auth.onAuthStateChanged(function(user){
+      currentUser = user;
+      if(user){
+        db.ref('users/' + user.uid).once('value').then(function(snap){
+          currentProfile = snap.val() || { displayName: user.email };
+          renderApp();
+        }).catch(function(){ currentProfile = { displayName: user.email }; renderApp(); });
+      } else {
+        currentProfile = null; renderApp();
+      }
+    });
+
+    function isOwnerByEmail(){ return currentUser && currentUser.email === OWNER_EMAIL; }
+
+    function isOwnerByMeta(uid){
+      return db.ref('meta/ownerUid').once('value').then(function(snap){ return snap.val() === uid; });
+    }
+
+    function getAdminRecord(uid){
+      return db.ref('admins/' + uid).once('value').then(function(snap){ return snap.val(); });
+    }
+
+    function renderApp(){
+      if(!currentUser) { renderLogin(); return; }
+      // load admin and owner info
+      getAdminRecord(currentUser.uid).then(function(adminRec){
+        isOwnerByMeta(currentUser.uid).then(function(ownerMeta){
+          currentProfile.admin = adminRec || null;
+          currentProfile.isOwner = ownerMeta || isOwnerByEmail();
+          renderHome();
+        });
+      });
+    }
+
+    /* AUTH UI */
+    function renderLogin(){
+      var html = '';
+      html += '<div class="card">';
+      html += '<h3>Welcome to Yes Madam</h3>';
+      html += '<div class="small">Sign in to book services & manage catalogue</div>';
+      html += '<div style="height:12px"></div>';
+      html += '<div class="form-row">';
+      html += '<input id="login-email" placeholder="Email" type="email" />';
+      html += '<input id="login-pass" placeholder="Password" type="password" />';
+      html += '<button class="primary" id="btn-login">Login</button>';
+      html += '<div style="display:flex;gap:8px;margin-top:8px"><button class="link-like" id="show-signup">Create account</button></div>';
+      html += '</div></div>';
+      screen.innerHTML = html;
+
+      var btnLogin = document.getElementById('btn-login');
+      btnLogin.onclick = function(){
+        var e = document.getElementById('login-email').value;
+        var p = document.getElementById('login-pass').value;
+        auth.signInWithEmailAndPassword(e,p).catch(function(err){ toast(err.message); });
+      };
+
+      document.getElementById('show-signup').onclick = function(){ renderSignup(); };
+    }
+
+    function renderSignup(){
+      var html = '';
+      html += '<div class="card">';
+      html += '<h3>Create Account</h3>';
+      html += '<div class="form-row">';
+      html += '<input id="su-name" placeholder="Your name" />';
+      html += '<input id="su-email" placeholder="Email" type="email" />';
+      html += '<input id="su-pass" placeholder="Password (6+ chars)" type="password" />';
+      html += '<button class="primary" id="btn-signup">Sign up</button>';
+      html += '<button class="link-like" id="back-login">Back to login</button>';
+      html += '</div></div>';
+      screen.innerHTML = html;
+
+      document.getElementById('btn-signup').onclick = function(){
+        var n = document.getElementById('su-name').value;
+        var e = document.getElementById('su-email').value;
+        var p = document.getElementById('su-pass').value;
+        auth.createUserWithEmailAndPassword(e,p).then(function(cred){
+          var uid = cred.user.uid;
+          db.ref('users/' + uid).set({ displayName: n || e, email: e, createdAt: Date.now() }).then(function(){ toast('Account created — signed in'); }).catch(function(err){ toast(err.message); });
+        }).catch(function(err){ toast(err.message); });
+      };
+
+      document.getElementById('back-login').onclick = function(){ renderLogin(); };
+    }
+
+    /* HOME */
+    function renderHome(){
+      var adminRec = currentProfile.admin;
+      var isOwnerFlag = currentProfile.isOwner;
+      var html = '';
+      html += '<div class="card" style="display:flex;align-items:center;gap:12px">';
+      html += '<div class="avatar">' + ((currentProfile.displayName||'U').slice(0,1).toUpperCase()) + '</div>';
+      html += '<div><div style="font-weight:700">Hello, ' + (currentProfile.displayName||currentUser.email) + '</div><div class="small">' + currentUser.email + '</div></div>';
+      html += '<div style="margin-left:auto;text-align:right">';
+      html += (isOwnerFlag? '<div class="badge">Owner</div>' : (adminRec? '<div class="badge">Admin</div>' : ''));
+      html += '<div style="height:8px"></div><button class="link-like" id="btn-logout">Logout</button></div></div>';
+
+      html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">Services</div><div class="small">Book beauty services</div></div><div><button class="link-like" id="btn-open-catalog">View</button></div></div></div>';
+
+      html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">Manage</div><div class="small">Admins & catalogue</div></div><div><button class="link-like" id="btn-admin-panel">Open</button></div></div></div>';
+
+      screen.innerHTML = html;
+
+      document.getElementById('btn-logout').onclick = function(){ auth.signOut(); };
+      document.getElementById('btn-open-catalog').onclick = function(){ renderCatalog(); };
+      document.getElementById('btn-admin-panel').onclick = function(){ renderAdminPanel(); };
+    }
+
+    /* CATALOG */
+    function renderCatalog(){
+      db.ref('categories').once('value').then(function(snap){
+        var cats = snap.val() || {};
+        var html = '';
+        html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">Catalog</div><div class="small">Categories & services</div></div><div><button class="link-like" id="back-home">Back</button></div></div></div>';
+        for(var cid in cats){
+          html += '<div class="card"><div style="display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700">' + cats[cid].title + '</div><div class="small">' + (cats[cid].desc||'') + '</div></div><div><button class="link-like" data-cid="' + cid + '" onclick="viewCategory(\'' + cid + '\')">Open</button></div></div></div>';
+        }
+        screen.innerHTML = html;
+        var backHome = document.getElementById('back-home'); if(backHome) backHome.onclick = function(){ renderHome(); };
+      });
+    }
+
+    window.viewCategory = function(cid){
+      db.ref('categories/' + cid).once('value').then(function(catSnap){
+        var cat = catSnap.val() || { title: 'Category', desc: '' };
+        db.ref('products').orderByChild('category').equalTo(cid).once('value').then(function(prodsSnap){
+          var prods = prodsSnap.val() || {};
+          var html = '';
+          html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">' + cat.title + '</div><div class="small">' + (cat.desc||'') + '</div></div><div><button class="link-like" id="back-cats">Back</button></div></div></div>';
+          for(var pid in prods){
+            var p = prods[pid];
+            html += '<div class="card product"><img src="' + (p.image||'') + '" onerror="this.src=\'https://via.placeholder.com/120\'"/><div style="flex:1"><div style="font-weight:700">' + p.title + '</div><div class="small">₹' + (p.price||0) + ' • ' + (p.duration||'30m') + '</div></div><div><button class="link-like" onclick="bookProduct(\'' + pid + '\')">Book</button></div></div>';
+          }
+          screen.innerHTML = html;
+          var backCats = document.getElementById('back-cats'); if(backCats) backCats.onclick = function(){ renderCatalog(); };
+        });
+      });
+    };
+
+    window.bookProduct = function(pid){
+      if(!currentUser){ toast('Please log in'); return; }
+      db.ref('products/' + pid).once('value').then(function(pSnap){
+        var p = pSnap.val() || { title: 'Service' };
+        db.ref('bookings').push().set({ uid: currentUser.uid, productId: pid, productTitle: p.title, createdAt: Date.now(), status: 'pending' }).then(function(){ toast('Booking requested'); });
+      });
+    };
+
+    /* ADMIN PANEL */
+    function renderAdminPanel(){
+      if(!currentUser){ toast('Login required'); return; }
+      getAdminRecord(currentUser.uid).then(function(adminRec){
+        isOwnerByMeta(currentUser.uid).then(function(ownerMeta){
+          var isOwnerFlag = ownerMeta || isOwnerByEmail();
+          if(!isOwnerFlag && !adminRec){ toast('Admins only'); return; }
+
+          var html = '';
+          html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">Admin Panel</div><div class="small">Manage categories, products & admins</div></div><div><button class="link-like" id="back-home2">Back</button></div></div></div>';
+          if(isOwnerFlag){
+            html += '<div class="card"><h4>Owner - Manage Admins</h4><div id="admins-list"></div><div style="height:8px"></div><div style="display:flex;gap:8px"><input id="new-admin-email" placeholder="Existing user\'s email or UID"/><button class="link-like" id="btn-add-admin">Add</button></div></div>';
+          }
+
+          html += '<div class="card"><h4>Categories</h4><div id="cats-admin"></div><div style="height:8px"></div><input id="new-cat-title" placeholder="Category title"/><input id="new-cat-desc" placeholder="Short description"/><button class="link-like" id="btn-add-cat">Add Category</button></div>';
+
+          html += '<div class="card"><h4>Products</h4><div id="prods-admin"></div><div style="height:8px"></div><select id="prod-cat-select"></select><input id="new-prod-title" placeholder="Product title"/><input id="new-prod-price" placeholder="Price"/><input id="new-prod-duration" placeholder="Duration e.g. 30m"/><input id="new-prod-image" type="file" accept="image/*"/><button class="link-like" id="btn-add-prod">Add Product</button></div>';
+
+          screen.innerHTML = html;
+          var backHome2 = document.getElementById('back-home2'); if(backHome2) backHome2.onclick = function(){ renderHome(); };
+
+          if(isOwnerFlag){ loadAdminsList(); var btnAddAdmin = document.getElementById('btn-add-admin'); if(btnAddAdmin) btnAddAdmin.onclick = function(){
+            var val = document.getElementById('new-admin-email').value.trim(); if(!val){ toast('Enter uid or email'); return; }
+            // try resolve email->uid
+            db.ref('users').orderByChild('email').equalTo(val).once('value').then(function(usersByEmail){
+              var uid = val;
+              if(usersByEmail.exists()){
+                var o = usersByEmail.val(); for(var k in o){ uid = k; break; }
+              }
+              db.ref('admins/' + uid).set({ displayName: val, permissions: { categories: true, products: true, orders: true } }).then(function(){ toast('Admin added'); loadAdminsList(); });
+            });
+          } }
+
+          var btnAddCat = document.getElementById('btn-add-cat'); if(btnAddCat) btnAddCat.onclick = function(){
+            var t = document.getElementById('new-cat-title').value.trim(); var d = document.getElementById('new-cat-desc').value.trim(); if(!t){ toast('Enter title'); return; }
+            db.ref('categories').push().set({ title: t, desc: d, createdAt: Date.now() }).then(function(){ toast('Category added'); loadCatsAdmin(); });
+          };
+
+          var btnAddProd = document.getElementById('btn-add-prod'); if(btnAddProd) btnAddProd.onclick = function(){
+            var title = document.getElementById('new-prod-title').value.trim(); var price = parseFloat(document.getElementById('new-prod-price').value||0); var duration = document.getElementById('new-prod-duration').value.trim(); var cat = document.getElementById('prod-cat-select').value; var fileInput = document.getElementById('new-prod-image');
+            if(!title || !cat){ toast('Title and category required'); return; }
+            if(fileInput && fileInput.files && fileInput.files.length){
+              var f = fileInput.files[0]; var key = 'product_images/' + Date.now() + '_' + f.name;
+              storage.ref(key).put(f).then(function(up){ up.ref.getDownloadURL().then(function(url){
+                db.ref('products').push().set({ title: title, price: price, category: cat, duration: duration, image: url, createdAt: Date.now() }).then(function(){ toast('Product added'); loadProdsAdmin(); });
+              });
+              });
+            } else {
+              db.ref('products').push().set({ title: title, price: price, category: cat, duration: duration, image: '', createdAt: Date.now() }).then(function(){ toast('Product added'); loadProdsAdmin(); });
+            }
+          };
+
+          loadProdsAdmin(); loadCatsAdmin();
+
+          function loadAdminsList(){
+            db.ref('admins').once('value').then(function(snap){ var data = snap.val() || {}; var el = document.getElementById('admins-list'); if(!el) return; el.innerHTML = ''; for(var a in data){ (function(a){ var rec = data[a]; var d = document.createElement('div'); d.className = 'card'; d.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">' + (rec.displayName||a) + '</div><div class="small">UID: ' + a + '</div></div><div><button class="link-like" data-uid="' + a + '">Remove</button></div></div>'; el.appendChild(d); d.querySelector('button').onclick = function(){ db.ref('admins/' + a).remove().then(function(){ toast('Admin removed'); loadAdminsList(); }); }; })(a); }
+            });
+          }
+
+          function loadCatsAdmin(){
+            db.ref('categories').once('value').then(function(snap){ var data = snap.val() || {}; var out = document.getElementById('cats-admin'); var select = document.getElementById('prod-cat-select'); if(out) out.innerHTML = ''; if(select) select.innerHTML = ''; for(var c in data){ (function(c){ var it = document.createElement('div'); it.className = 'card'; it.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">' + data[c].title + '</div><div class="small">' + (data[c].desc||'') + '</div></div><div><button class="link-like" data-cid="' + c + '">Del</button></div></div>'; if(out) out.appendChild(it); (function(c){ it.querySelector('button').onclick = function(){ db.ref('categories/' + c).remove().then(function(){ toast('Category deleted'); loadCatsAdmin(); }); }; })(c); if(select){ var opt = document.createElement('option'); opt.value = c; opt.textContent = data[c].title; select.appendChild(opt); } })(c); }
+            });
+          }
+
+          function loadProdsAdmin(){
+            db.ref('products').once('value').then(function(snap){ var data = snap.val() || {}; var out = document.getElementById('prods-admin'); if(!out) return; out.innerHTML = ''; for(var p in data){ (function(p){ var rec = data[p]; var it = document.createElement('div'); it.className = 'card product'; it.innerHTML = '<img src="' + (rec.image||'') + '" onerror="this.src=\'https://via.placeholder.com/120\'"/><div style="flex:1"><div style="font-weight:700">' + rec.title + '</div><div class="small">₹' + (rec.price||0) + '</div></div><div><button class="link-like">Del</button></div>'; out.appendChild(it); it.querySelector('button').onclick = function(){ db.ref('products/' + p).remove().then(function(){ toast('Product deleted'); loadProdsAdmin(); }); }; })(p); }
+            });
+          }
+
+        });
+      });
+    }
+
+    /* BOOKINGS PAGE */
+    function renderBookings(){
+      if(!currentUser) { renderLogin(); return; }
+      db.ref('bookings').orderByChild('uid').equalTo(currentUser.uid).once('value').then(function(snap){ var data = snap.val() || {}; var html = ''; html += '<div class="card"><div style="display:flex;justify-content:space-between"><div><div style="font-weight:700">My Bookings</div><div class="small">Requests & status</div></div><div><button class="link-like" id="back-home3">Back</button></div></div></div>'; for(var b in data){ var r = data[b]; html += '<div class="card"><div style="display:flex;justify-content:space-between"><div><div style="font-weight:700">' + r.productTitle + '</div><div class="small">' + (new Date(r.createdAt)).toLocaleString() + '</div></div><div><div class="small">' + r.status + '</div></div></div></div>'; } screen.innerHTML = html; var back = document.getElementById('back-home3'); if(back) back.onclick = function(){ renderHome(); }; });
+    }
+
+    // nav
+    document.getElementById('nav-home').onclick = function(){ if(currentUser) renderHome(); else renderLogin(); };
+    document.getElementById('nav-cart').onclick = function(){ if(currentUser) renderBookings(); else renderLogin(); };
+    document.getElementById('nav-admin').onclick = function(){ if(currentUser) renderAdminPanel(); else renderLogin(); };
+
+    // initial
+    renderLogin();
+
+    // Helpful: during first setup, you may set meta/ownerUid in Realtime DB to the owner's uid (optional)
+  </script>
+</body>
+</html>
