@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Yes Madam — Beauty Parlour (mobile)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    /* Mobile-first beautiful theme inspired by 'Yes Madam' */
+    :root{
+      --bg:#fff8fb;
+      --card:#fff;
+      --accent:#ff3b8a; /* hot pink */
+      --muted:#8a8a8f;
+      --glass: rgba(255,255,255,0.7);
+      --radius:18px;
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#fff8fb 0%, #fff 60%);} 
+    .app{max-width:420px;margin:0 auto;box-shadow:0 10px 30px rgba(0,0,0,0.06);min-height:100vh}
+    header{padding:18px 16px;background:transparent;display:flex;align-items:center;gap:12px}
+    .logo{display:flex;align-items:center;gap:10px}
+    .brand{font-weight:700;color:var(--accent);font-size:20px}
+    .subtitle{font-size:12px;color:var(--muted)}
+
+    main{padding:8px 16px 90px}
+    .card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(20,20,20,0.04)}
+
+    /* Login / forms */
+    .form-row{display:flex;flex-direction:column;gap:8px}
+    input[type=email],input[type=password],input[type=text],textarea{width:100%;padding:12px;border-radius:12px;border:1px solid #f1e6ee;background:transparent}
+    button.primary{width:100%;padding:12px;border-radius:12px;border:0;background:var(--accent);color:white;font-weight:600}
+    .link-like{color:var(--accent);font-weight:600;cursor:pointer;background:none;border:0}
+
+    /* Home */
+    .hero{display:flex;align-items:center;gap:12px}
+    .hero .avatar{width:70px;height:70px;border-radius:18px;background:linear-gradient(135deg,#ffd7e6,#fff);display:flex;align-items:center;justify-content:center;font-weight:700}
+
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .tile{background:linear-gradient(180deg, rgba(255,59,138,0.06), rgba(255,255,255,0.2));padding:12px;border-radius:12px;text-align:center}
+    .tile .material-icons{display:block;font-size:28px;margin-bottom:6px;color:var(--accent)}
+
+    /* Product list */
+    .product{display:flex;gap:10px;align-items:center}
+    .product img{width:64px;height:64px;border-radius:12px;object-fit:cover}
+    .small{font-size:13px;color:var(--muted)}
+
+    /* bottom nav */
+    footer.bottom-nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:420px;padding:10px;background:transparent}
+    .nav-row{display:flex;justify-content:space-between;gap:8px}
+    .nav-btn{flex:1;padding:12px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;gap:8px}
+
+    /* responsive note */
+    @media(min-width:421px){body{background:#fafafa}}
+    /* small helpers */
+    .row{display:flex;gap:8px;align-items:center}
+    .muted{color:var(--muted)}
+
+    /* admin badge */
+    .badge{background:linear-gradient(90deg,#ffeef8,#fff);color:var(--accent);padding:6px 8px;border-radius:999px;font-weight:600;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header>
+      <div class="logo">
+        <div class="avatar brand" style="width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg,#ffd7e6,#ffecf6)">YM</div>
+        <div>
+          <div class="brand">Yes Madam</div>
+          <div class="subtitle">Beauty & Salon — Mobile</div>
+        </div>
+      </div>
+    </header>
+
+    <main id="screen">
+      <!-- app renders here via JS -->
+    </main>
+
+    <footer class="bottom-nav">
+      <div class="nav-row">
+        <button class="nav-btn" id="nav-home"><span class="material-icons">home</span></button>
+        <button class="nav-btn" id="nav-cart"><span class="material-icons">shopping_cart</span></button>
+        <button class="nav-btn" id="nav-admin"><span class="material-icons">settings</span></button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase SDKs (compat for simpler code) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <script>
+    /********** CONFIGURE FIREBASE **********/
+    const firebaseConfig = {
+      apiKey: "AIzaSyDlFYwKIcsI2yNL6iaGJINJKEB_CrRZ_iI",
+      authDomain: "chatme-a3ef7.firebaseapp.com",
+      databaseURL: "https://chatme-a3ef7-default-rtdb.firebaseio.com",
+      projectId: "chatme-a3ef7",
+      storageBucket: "chatme-a3ef7.firebasestorage.app",
+      messagingSenderId: "47843223818",
+      appId: "1:47843223818:web:e08c02c6e52bce2c51b2f3"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const storage = firebase.storage();
+
+    /********** BASIC APP STATE & HELPERS **********/
+    const appEl = document.getElementById('app');
+    const screen = document.getElementById('screen');
+    let currentUser = null;
+    let currentProfile = null; // loaded from /users/{uid}
+
+    // Utility: show toast
+    function toast(msg){
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.style.position='fixed';t.style.left='50%';t.style.transform='translateX(-50%)';t.style.bottom='110px';t.style.background='rgba(0,0,0,0.8)';t.style.color='#fff';t.style.padding='10px 14px';t.style.borderRadius='12px';t.style.zIndex=9999;document.body.appendChild(t);
+      setTimeout(()=>t.remove(),3000);
+    }
+
+    /********** AUTH & ROLE MANAGEMENT **********/
+    // Role model (in Realtime DB)
+    // /meta/ownerUid -> string
+    // /admins/{uid} -> { displayName, permissions: {categories:true,products:true,orders:true} }
+
+    // Helper to check if current user is owner
+    async function isOwner(uid){
+      const snap = await db.ref('meta/ownerUid').once('value');
+      return snap.val() === uid;
+    }
+
+    async function getAdminRecord(uid){
+      const snap = await db.ref('admins/'+uid).once('value');
+      return snap.val();
+    }
+
+    // Sign Up for users only (admins created by owner)
+    async function signUp(email,password,name){
+      const cred = await auth.createUserWithEmailAndPassword(email,password);
+      const uid = cred.user.uid;
+      // create profile
+      await db.ref('users/'+uid).set({displayName:name||email,createdAt:Date.now(),email});
+      return uid;
+    }
+
+    // Owner-only: create admin
+    async function addAdmin(uid,displayName,permissions){
+      await db.ref('admins/'+uid).set({displayName,permissions});
+    }
+
+    // Auth state listener
+    auth.onAuthStateChanged(async user=>{
+      currentUser = user;
+      if(user){
+        const profSnap = await db.ref('users/'+user.uid).once('value');
+        currentProfile = profSnap.val() || {displayName:user.email};
+      } else {
+        currentProfile = null;
+      }
+      renderApp();
+    });
+
+    /********** ROUTES / RENDER FUNCTIONS **********/
+    function renderApp(){
+      if(!currentUser) return renderLogin();
+      // fetch roles
+      Promise.all([getAdminRecord(currentUser.uid), isOwner(currentUser.uid)]).then(([admin,owner])=>{
+        currentProfile.admin = admin || null;
+        currentProfile.isOwner = owner;
+        renderHome();
+      });
+    }
+
+    function renderLogin(){
+      screen.innerHTML = `
+        <div class="card">
+          <h3>Welcome to Yes Madam</h3>
+          <div class="small muted">Sign in to book services & manage catalogue</div>
+          <div style="height:12px"></div>
+          <div class="form-row">
+            <input id="login-email" placeholder="Email" type="email" />
+            <input id="login-pass" placeholder="Password" type="password" />
+            <button class="primary" id="btn-login">Login</button>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="link-like" id="show-signup">Create account</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Owner actions</h4>
+          <div class="small muted">If you are the salon owner, sign in with owner account and go to Admin tab to manage admins</div>
+        </div>
+      `;
+      document.getElementById('btn-login').onclick = async ()=>{
+        const e = document.getElementById('login-email').value;
+        const p = document.getElementById('login-pass').value;
+        try{await auth.signInWithEmailAndPassword(e,p);}catch(err){toast(err.message)}
+      }
+      document.getElementById('show-signup').onclick = ()=>renderSignup();
+    }
+
+    function renderSignup(){
+      screen.innerHTML = `
+        <div class="card">
+          <h3>Create Account</h3>
+          <div class="form-row">
+            <input id="su-name" placeholder="Your name" />
+            <input id="su-email" placeholder="Email" type="email" />
+            <input id="su-pass" placeholder="Password (6+ chars)" type="password" />
+            <button class="primary" id="btn-signup">Sign up</button>
+            <button class="link-like" id="back-login">Back to login</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('btn-signup').onclick = async ()=>{
+        const n=document.getElementById('su-name').value;
+        const e=document.getElementById('su-email').value;
+        const p=document.getElementById('su-pass').value;
+        try{await signUp(e,p,n);toast('Account created');}catch(err){toast(err.message)}
+      }
+      document.getElementById('back-login').onclick = ()=>renderLogin();
+    }
+
+    async function renderHome(){
+      const isOwnerFlag = currentProfile.isOwner;
+      const adminRec = currentProfile.admin;
+      screen.innerHTML = `
+        <div class="card hero">
+          <div class="avatar">${(currentProfile.displayName||'U').slice(0,1).toUpperCase()}</div>
+          <div>
+            <div style="font-weight:700">Hello, ${currentProfile.displayName||currentUser.email}</div>
+            <div class="small muted">${currentUser.email}</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            ${isOwnerFlag?'<div class="badge">Owner</div>':(adminRec?'<div class="badge">Admin</div>':'')}
+            <div style="height:8px"></div>
+            <button class="link-like" id="btn-logout">Logout</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700">Services</div>
+              <div class="small muted">Book beauty services</div>
+            </div>
+            <button class="link-like" id="btn-open-catalog">View</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700">Offers</div>
+              <div class="small muted">Seasonal packages</div>
+            </div>
+            <div class="row">
+              <div style="text-align:right">₹499 <div class="small muted">starting</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700">Manage</div>
+              <div class="small muted">Admins & catalogue</div>
+            </div>
+            <div class="row">
+              <button class="link-like" id="btn-admin-panel">Open</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('btn-logout').onclick = ()=>auth.signOut();
+      document.getElementById('btn-open-catalog').onclick = ()=>renderCatalog();
+      document.getElementById('btn-admin-panel').onclick = ()=>renderAdminPanel();
+    }
+
+    /********** CATALOG: categories & products **********/
+    async function renderCatalog(){
+      // load categories
+      const catsSnap = await db.ref('categories').once('value');
+      const cats = catsSnap.val()||{};
+      let html = `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">Catalog</div><div class="small muted">Categories & services</div></div><div><button class="link-like" id="back-home">Back</button></div></div></div>`;
+      for(const cid in cats){
+        html += `<div class="card"><div style="display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700">${cats[cid].title}</div><div class="small muted">${cats[cid].desc||''}</div></div><div><button class="link-like" data-cid="${cid}" onclick="viewCategory('${cid}')">Open</button></div></div></div>`;
+      }
+      html += `<div style="height:22px"></div>`;
+      screen.innerHTML = html;
+      document.getElementById('back-home').onclick = ()=>renderHome();
+    }
+
+    // view category products (global function to allow inline onclick)
+    window.viewCategory = async function(cid){
+      const catSnap = await db.ref('categories/'+cid).once('value');
+      const cat = catSnap.val();
+      const prodSnap = await db.ref('products').orderByChild('category').equalTo(cid).once('value');
+      const prods = prodSnap.val()||{};
+      let html = `
+        <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${cat.title}</div><div class="small muted">${cat.desc||''}</div></div><div><button class="link-like" id="back-cats">Back</button></div></div></div>
+      `;
+      for(const pid in prods){
+        const p = prods[pid];
+        html += `<div class="card product"><img src="${p.image||''}" onerror="this.src='https://via.placeholder.com/120'"/><div style="flex:1"><div style="font-weight:700">${p.title}</div><div class="small muted">₹${p.price||0} • ${p.duration||'30m'}</div></div><div><button class="link-like" onclick="bookProduct('${pid}')">Book</button></div></div>`;
+      }
+      screen.innerHTML = html;
+      document.getElementById('back-cats').onclick = ()=>renderCatalog();
+    }
+
+    window.bookProduct = async function(pid){
+      if(!currentUser){toast('Please log in');return}
+      // Simplified booking: create booking under /bookings/{push}
+      const pSnap = await db.ref('products/'+pid).once('value');
+      const p = pSnap.val();
+      const bRef = db.ref('bookings').push();
+      await bRef.set({uid:currentUser.uid,productId:pid,productTitle:p.title,createdAt:Date.now(),status:'pending'});
+      toast('Booking requested — owner/admin will confirm');
+    }
+
+    /********** ADMIN PANEL (Owner & Admins) **********/
+    async function renderAdminPanel(){
+      if(!currentUser){toast('Login required');return}
+      const adminRec = await getAdminRecord(currentUser.uid);
+      const isOwnerFlag = await isOwner(currentUser.uid);
+      if(!isOwnerFlag && !adminRec){toast('Admins only');return}
+      const perms = adminRec?adminRec.permissions:{};
+      let html = `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">Admin Panel</div><div class="small muted">Manage categories, products & admins</div></div><div><button class="link-like" id="back-home2">Back</button></div></div></div>`;
+      if(isOwnerFlag){
+        html += `<div class="card"><h4>Owner - Manage Admins</h4><div id="admins-list"></div><div style="height:8px"></div>
+        <div style="display:flex;gap:8px"><input id="new-admin-email" placeholder="Existing user's UID or email"/><button class="link-like" id="btn-add-admin">Add</button></div>
+        </div>`;
+      }
+      // categories & products blocks
+      html += `<div class="card"><h4>Categories</h4><div id="cats-admin"></div><div style="height:8px"></div>
+        <input id="new-cat-title" placeholder="Category title"/><input id="new-cat-desc" placeholder="Short description"/><button class="link-like" id="btn-add-cat">Add Category</button>
+      </div>`;
+
+      html += `<div class="card"><h4>Products</h4><div id="prods-admin"></div><div style="height:8px"></div>
+        <select id="prod-cat-select"></select>
+        <input id="new-prod-title" placeholder="Product title"/>
+        <input id="new-prod-price" placeholder="Price"/>
+        <input id="new-prod-duration" placeholder="Duration e.g. 30m"/>
+        <input id="new-prod-image" type="file" accept="image/*"/>
+        <button class="link-like" id="btn-add-prod">Add Product</button>
+      </div>`;
+
+      screen.innerHTML = html;
+      document.getElementById('back-home2').onclick = ()=>renderHome();
+
+      // load admins list if owner
+      if(isOwnerFlag){loadAdminsList();
+        document.getElementById('btn-add-admin').onclick = async ()=>{
+          const val = document.getElementById('new-admin-email').value.trim();
+          if(!val){toast('Enter UID or email of existing user');return}
+          // We try to resolve email->uid by scanning users index (simple approach)
+          const usersSnap = await db.ref('users').orderByChild('email').equalTo(val).once('value');
+          let uid = null;
+          if(usersSnap.exists()){uid = Object.keys(usersSnap.val())[0];}
+          else {uid = val;} // assume user gave uid
+          // default permissions: categories & products manage
+          await addAdmin(uid, val, {categories:true,products:true,orders:true});
+          toast('Admin added');
+          loadAdminsList();
+        }
+      }
+
+      // categories
+      document.getElementById('btn-add-cat').onclick = async ()=>{
+        const t = document.getElementById('new-cat-title').value.trim();
+        const d = document.getElementById('new-cat-desc').value.trim();
+        if(!t){toast('Enter title');return}
+        const ref = db.ref('categories').push();
+        await ref.set({title:t,desc:d,createdAt:Date.now()});
+        toast('Category added');
+        loadCatsAdmin();
+      }
+
+      // products
+      loadCatsAdmin();
+      document.getElementById('btn-add-prod').onclick = async ()=>{
+        const title = document.getElementById('new-prod-title').value.trim();
+        const price = parseFloat(document.getElementById('new-prod-price').value||0);
+        const duration = document.getElementById('new-prod-duration').value.trim();
+        const cat = document.getElementById('prod-cat-select').value;
+        const fileInput = document.getElementById('new-prod-image');
+        if(!title||!cat){toast('Title and category required');return}
+        let imageUrl = '';
+        if(fileInput.files.length){
+          const f = fileInput.files[0];
+          const key = 'product_images/'+Date.now()+'_'+f.name;
+          const up = await storage.ref(key).put(f);
+          imageUrl = await up.ref.getDownloadURL();
+        }
+        const ref = db.ref('products').push();
+        await ref.set({title,price,category:cat,duration,image:imageUrl,createdAt:Date.now()});
+        toast('Product added');
+        loadProdsAdmin();
+      }
+
+      // load lists
+      loadProdsAdmin();
+
+      // helper functions
+      async function loadAdminsList(){
+        const snap = await db.ref('admins').once('value');
+        const data = snap.val()||{}; const el=document.getElementById('admins-list');el.innerHTML='';
+        for(const a in data){
+          const rec = data[a];
+          const d = document.createElement('div'); d.className='card'; d.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${rec.displayName||a}</div><div class="small muted">UID: ${a}</div></div><div><button class="link-like" data-uid="${a}">Remove</button></div></div>`;
+          el.appendChild(d);
+          d.querySelector('button').onclick = async ()=>{await db.ref('admins/'+a).remove();toast('Admin removed');loadAdminsList();}
+        }
+      }
+
+      async function loadCatsAdmin(){
+        const snap = await db.ref('categories').once('value');
+        const data = snap.val()||{}; const out=document.getElementById('cats-admin'); out.innerHTML='';
+        const select = document.getElementById('prod-cat-select'); select.innerHTML='';
+        for(const c in data){
+          const it = document.createElement('div'); it.className='card'; it.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${data[c].title}</div><div class="small muted">${data[c].desc||''}</div></div><div><button class="link-like" data-cid="${c}">Del</button></div></div>`;
+          out.appendChild(it);
+          it.querySelector('button').onclick = async ()=>{await db.ref('categories/'+c).remove();toast('Category deleted');loadCatsAdmin();}
+          // add to select
+          const opt = document.createElement('option'); opt.value=c; opt.textContent=data[c].title; select.appendChild(opt);
+        }
+      }
+
+      async function loadProdsAdmin(){
+        const snap = await db.ref('products').once('value');
+        const data = snap.val()||{}; const out=document.getElementById('prods-admin'); out.innerHTML='';
+        for(const p in data){
+          const rec = data[p];
+          const it = document.createElement('div'); it.className='card product'; it.innerHTML=`<img src="${rec.image||''}" onerror="this.src='https://via.placeholder.com/120'"/><div style="flex:1"><div style="font-weight:700">${rec.title}</div><div class="small muted">₹${rec.price||0}</div></div><div><button class="link-like">Del</button></div>`;
+          out.appendChild(it);
+          it.querySelector('button').onclick = async ()=>{await db.ref('products/'+p).remove();toast('Product deleted');loadProdsAdmin();}
+        }
+      }
+
+    }
+
+    /********** NAV handlers **********/
+    document.getElementById('nav-home').onclick = ()=>{ if(currentUser) renderHome(); else renderLogin(); }
+    document.getElementById('nav-cart').onclick = ()=>{ if(currentUser) renderBookings(); else renderLogin(); }
+    document.getElementById('nav-admin').onclick = ()=>{ if(currentUser) renderAdminPanel(); else renderLogin(); }
+
+    async function renderBookings(){
+      if(!currentUser) return renderLogin();
+      const snap = await db.ref('bookings').orderByChild('uid').equalTo(currentUser.uid).once('value');
+      const data = snap.val()||{};
+      let html = `<div class="card"><div style="display:flex;justify-content:space-between"><div><div style="font-weight:700">My Bookings</div><div class="small muted">Requests & status</div></div><div><button class="link-like" id="back-home3">Back</button></div></div></div>`;
+      for(const b in data){ const r = data[b]; html += `<div class="card"><div style="display:flex;justify-content:space-between"><div><div style="font-weight:700">${r.productTitle}</div><div class="small muted">${new Date(r.createdAt).toLocaleString()}</div></div><div><div class="small muted">${r.status}</div></div></div></div>` }
+      screen.innerHTML = html; document.getElementById('back-home3').onclick = ()=>renderHome();
+    }
+
+    // Initial render
+    renderLogin();
+
+    // optional: setup owner uid if not set (first user) - helper for convenience in dev
+    // DO NOT run in production unless you want first registered user to be owner. Commented out for safety.
+    /*
+    (async()=>{
+      const snap = await db.ref('meta/ownerUid').once('value'); if(!snap.exists() && currentUser){ await db.ref('meta/ownerUid').set(currentUser.uid); }
+    })();
+    */
+
+  </script>
+</body>
+</html>
