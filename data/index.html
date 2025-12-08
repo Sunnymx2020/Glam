@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GlamCare Beauty Parlour</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #ff6b8b;
+            --secondary: #ff9a8b;
+            --accent: #ff8e53;
+            --dark: #333;
+            --light: #fff;
+            --gray: #f5f5f5;
+            --success: #4CAF50;
+            --warning: #ff9800;
+            --danger: #f44336;
+        }
+
+        body {
+            background-color: #fff;
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            color: white;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Auth Screens */
+        .auth-container {
+            display: none;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        .auth-box {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-logo h1 {
+            color: var(--primary);
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .auth-logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            font-weight: 600;
+            color: #999;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .auth-switch span {
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Main App Container */
+        .app-container {
+            display: none;
+        }
+
+        /* Header */
+        .app-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px;
+            position: relative;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header-logo h2 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .header-logo p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 55px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            width: 200px;
+            z-index: 100;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        .dropdown-item {
+            padding: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .dropdown-item:hover {
+            background: var(--gray);
+        }
+
+        .dropdown-item i {
+            color: var(--primary);
+            width: 20px;
+        }
+
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #eee;
+            overflow-x: auto;
+            padding: 0 10px;
+        }
+
+        .nav-tab {
+            padding: 15px 20px;
+            white-space: nowrap;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Content Area */
+        .content-area {
+            padding: 20px;
+            min-height: calc(100vh - 200px);
+        }
+
+        /* Home Page */
+        .hero-section {
+            background: linear-gradient(135deg, #ffd6e0, #ffeff3);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .hero-section h3 {
+            color: var(--dark);
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+
+        .hero-section p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .service-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            color: white;
+            font-size: 24px;
+        }
+
+        /* Admin Pages */
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .admin-header h3 {
+            color: var(--dark);
+        }
+
+        .add-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .edit-btn {
+            background: var(--warning);
+            color: white;
+        }
+
+        .delete-btn {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 20px;
+            padding: 30px;
+            animation: modalSlide 0.3s;
+        }
+
+        @keyframes modalSlide {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: var(--dark);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+        }
+
+        /* Form Styles */
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .form-actions button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .submit-btn {
+            background: var(--success);
+            color: white;
+        }
+
+        .cancel-btn {
+            background: #eee;
+            color: #666;
+        }
+
+        /* Permissions */
+        .permissions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .permission-item {
+            background: var(--gray);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .permission-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Footer */
+        .app-footer {
+            background: var(--dark);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .permissions-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            z-index: 1001;
+            animation: slideIn 0.3s;
+            display: none;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .notification.success {
+            background: var(--success);
+        }
+
+        .notification.error {
+            background: var(--danger);
+        }
+
+        .notification.warning {
+            background: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen">
+        <div class="spinner"></div>
+        <h2>GlamCare Beauty</h2>
+        <p>Loading your beauty experience...</p>
+    </div>
+
+    <!-- Auth Container -->
+    <div class="auth-container" id="authContainer">
+        <div class="auth-box">
+            <div class="auth-logo">
+                <h1>GlamCare</h1>
+                <p>Your Beauty, Our Passion</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchAuth('login')">Login</div>
+                <div class="auth-tab" onclick="switchAuth('register')">Register</div>
+            </div>
+            
+            <div id="loginForm">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter password">
+                </div>
+                <button class="auth-btn" onclick="login()">Login</button>
+                <div class="auth-switch">
+                    Don't have an account? <span onclick="switchAuth('register')">Register</span>
+                </div>
+            </div>
+            
+            <div id="registerForm" style="display: none;">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="registerName" placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="registerEmail" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="registerPassword" placeholder="Create password (min 6 chars)">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="registerPhone" placeholder="Enter phone number">
+                </div>
+                <button class="auth-btn" onclick="register()">Create Account</button>
+                <div class="auth-switch">
+                    Already have an account? <span onclick="switchAuth('login')">Login</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div class="app-container" id="appContainer">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-top">
+                <div class="header-logo">
+                    <h2>GlamCare</h2>
+                    <p>Welcome, <span id="userName">User</span></p>
+                </div>
+                <div class="user-menu">
+                    <div class="user-avatar" onclick="toggleDropdown()">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <div class="dropdown-item" onclick="showProfile()">
+                            <i class="fas fa-user-circle"></i>
+                            <span>My Profile</span>
+                        </div>
+                        <div class="dropdown-item" onclick="showBookings()">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>My Bookings</span>
+                        </div>
+                        <div class="dropdown-item" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav-tabs" id="navTabs">
+            <div class="nav-tab active" onclick="showPage('home')">
+                <i class="fas fa-home"></i> Home
+            </div>
+            <div class="nav-tab" onclick="showPage('services')">
+                <i class="fas fa-spa"></i> Services
+            </div>
+            <div class="nav-tab" onclick="showPage('bookings')">
+                <i class="fas fa-calendar-check"></i> Bookings
+            </div>
+            <div class="nav-tab" onclick="showPage('admin')" id="adminTab" style="display: none;">
+                <i class="fas fa-cog"></i> Admin
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area" id="contentArea">
+            <!-- Home Page Content -->
+            <div id="homePage">
+                <div class="hero-section">
+                    <h3>Welcome to GlamCare Beauty!</h3>
+                    <p>Experience premium beauty services at your convenience</p>
+                    <a href="#" class="cta-button" onclick="showPage('services')">Book Now</a>
+                </div>
+                
+                <h3 style="margin-bottom: 15px;">Popular Services</h3>
+                <div class="services-grid" id="servicesGrid">
+                    <!-- Services will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Services Page -->
+            <div id="servicesPage" style="display: none;">
+                <h3>Our Services</h3>
+                <div id="servicesList">
+                    <!-- Services will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Bookings Page -->
+            <div id="bookingsPage" style="display: none;">
+                <h3>My Bookings</h3>
+                <div id="bookingsList">
+                    <!-- Bookings will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Admin Dashboard -->
+            <div id="adminPage" style="display: none;">
+                <div class="admin-header">
+                    <h3>Admin Dashboard</h3>
+                    <div>
+                        <button class="add-btn" onclick="showAdminSection('users')">
+                            <i class="fas fa-users"></i> Manage Users
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Admin Sections -->
+                <div id="adminSections">
+                    <!-- Default admin content -->
+                    <div class="card">
+                        <h4>Quick Stats</h4>
+                        <div id="adminStats">
+                            <!-- Stats will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Users Management -->
+                    <div id="usersSection" style="display: none;">
+                        <div class="admin-header">
+                            <h3>Manage Users</h3>
+                            <button class="add-btn" onclick="showAddUserModal()">
+                                <i class="fas fa-user-plus"></i> Add Admin
+                            </button>
+                        </div>
+                        <div id="usersList">
+                            <!-- Users will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Categories Management -->
+                    <div id="categoriesSection" style="display: none;">
+                        <div class="admin-header">
+                            <h3>Manage Categories</h3>
+                            <button class="add-btn" onclick="showAddCategoryModal()">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                        </div>
+                        <div id="categoriesList">
+                            <!-- Categories will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Services Management -->
+                    <div id="servicesAdminSection" style="display: none;">
+                        <div class="admin-header">
+                            <h3>Manage Services</h3>
+                            <button class="add-btn" onclick="showAddServiceModal()">
+                                <i class="fas fa-plus"></i> Add Service
+                            </button>
+                        </div>
+                        <div id="servicesAdminList">
+                            <!-- Services will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>© 2024 GlamCare Beauty Parlour. All rights reserved.</p>
+            <p style="font-size: 12px; margin-top: 5px;">Contact: info@glamcare.com | +91 9876543210</p>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add User Modal -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Admin User</h3>
+                <button class="close-btn" onclick="closeModal('addUserModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="adminUserName" placeholder="Enter full name">
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="adminUserEmail" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="adminUserPassword" placeholder="Set password">
+            </div>
+            <h4>Permissions</h4>
+            <div class="permissions-grid">
+                <label class="permission-item">
+                    <input type="checkbox" id="permManageUsers"> Manage Users
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" id="permManageCategories"> Manage Categories
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" id="permManageServices"> Manage Services
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" id="permManageBookings"> Manage Bookings
+                </label>
+            </div>
+            <div class="form-actions">
+                <button class="submit-btn" onclick="saveAdminUser()">Save</button>
+                <button class="cancel-btn" onclick="closeModal('addUserModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div class="modal" id="addCategoryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Category</h3>
+                <button class="close-btn" onclick="closeModal('addCategoryModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Category Name</label>
+                <input type="text" id="categoryName" placeholder="Enter category name">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="categoryDescription" placeholder="Enter description" style="width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; resize: vertical; min-height: 100px;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Category Icon</label>
+                <input type="text" id="categoryIcon" placeholder="Enter FontAwesome icon class (e.g., fas fa-spa)">
+            </div>
+            <div class="form-actions">
+                <button class="submit-btn" onclick="saveCategory()">Save</button>
+                <button class="cancel-btn" onclick="closeModal('addCategoryModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Service Modal -->
+    <div class="modal" id="addServiceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Service</h3>
+                <button class="close-btn" onclick="closeModal('addServiceModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" id="serviceName" placeholder="Enter service name">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="serviceDescription" placeholder="Enter description" style="width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; resize: vertical; min-height: 100px;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Price (₹)</label>
+                <input type="number" id="servicePrice" placeholder="Enter price">
+            </div>
+            <div class="form-group">
+                <label>Duration (minutes)</label>
+                <input type="number" id="serviceDuration" placeholder="Enter duration">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="serviceCategory" style="width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 10px; font-size: 16px;">
+                    <!-- Categories will be loaded here -->
+                </select>
+            </div>
+            <div class="form-actions">
+                <button class="submit-btn" onclick="saveService()">Save</button>
+                <button class="cancel-btn" onclick="closeModal('addServiceModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal" id="profileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>My Profile</h3>
+                <button class="close-btn" onclick="closeModal('profileModal')">&times;</button>
+            </div>
+            <div id="profileContent">
+                <!-- Profile content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <!-- Firebase Configuration and App Script -->
+    <script>
+        // Firebase Configuration for Realtime Database
+        const firebaseConfig = {
+            apiKey: "AIzaSyDlFYwKIcsI2yNL6iaGJINJKEB_CrRZ_iI",
+            authDomain: "chatme-a3ef7.firebaseapp.com",
+            databaseURL: "https://chatme-a3ef7-default-rtdb.firebaseio.com",
+            projectId: "chatme-a3ef7",
+            storageBucket: "chatme-a3ef7.firebasestorage.app",
+            messagingSenderId: "47843223818",
+            appId: "1:47843223818:web:e08c02c6e52bce2c51b2f3"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Global Variables
+        let currentUser = null;
+        let userRole = null;
+        let userPermissions = {};
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.querySelector('.loading-screen').style.display = 'none';
+                checkAuthState();
+            }, 1500);
+        });
+
+        // Auth State Listener
+        function checkAuthState() {
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    currentUser = user;
+                    await loadUserData(user.uid);
+                    showApp();
+                } else {
+                    showAuth();
+                }
+            });
+        }
+
+        // Load User Data from Realtime Database
+        async function loadUserData(userId) {
+            try {
+                const userRef = database.ref('users/' + userId);
+                userRef.once('value').then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        document.getElementById('userName').textContent = userData.name || 'User';
+                        userRole = userData.role || 'user';
+                        userPermissions = userData.permissions || {};
+                        
+                        // Show admin tab if user is admin or owner
+                        if (userRole === 'admin' || userRole === 'owner') {
+                            document.getElementById('adminTab').style.display = 'flex';
+                        }
+                    } else {
+                        // Create user document if it doesn't exist
+                        database.ref('users/' + userId).set({
+                            name: currentUser.displayName || currentUser.email.split('@')[0],
+                            email: currentUser.email,
+                            role: 'user',
+                            phone: '',
+                            createdAt: Date.now()
+                        });
+                        document.getElementById('userName').textContent = currentUser.email.split('@')[0];
+                        userRole = 'user';
+                        userPermissions = {};
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                showNotification('Error loading user data', 'error');
+            }
+        }
+
+        // Auth Functions
+        function switchAuth(type) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabs = document.querySelectorAll('.auth-tab');
+            
+            if (type === 'login') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                tabs[0].classList.add('active');
+                tabs[1].classList.remove('active');
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                tabs[0].classList.remove('active');
+                tabs[1].classList.add('active');
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showNotification('Login successful!', 'success');
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function register() {
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const phone = document.getElementById('registerPhone').value;
+            
+            if (!name || !email || !password || !phone) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                await userCredential.user.updateProfile({ displayName: name });
+                
+                // Create user in Realtime Database
+                await database.ref('users/' + userCredential.user.uid).set({
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    role: 'user',
+                    permissions: {},
+                    createdAt: Date.now()
+                });
+                
+                showNotification('Registration successful!', 'success');
+                switchAuth('login');
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function logout() {
+            try {
+                await auth.signOut();
+                showNotification('Logged out successfully', 'success');
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        // Page Navigation
+        function showPage(page) {
+            // Hide all pages
+            document.getElementById('homePage').style.display = 'none';
+            document.getElementById('servicesPage').style.display = 'none';
+            document.getElementById('bookingsPage').style.display = 'none';
+            document.getElementById('adminPage').style.display = 'none';
+            
+            // Hide all admin sections
+            document.getElementById('usersSection').style.display = 'none';
+            document.getElementById('categoriesSection').style.display = 'none';
+            document.getElementById('servicesAdminSection').style.display = 'none';
+            
+            // Update nav tabs
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected page
+            switch(page) {
+                case 'home':
+                    document.getElementById('homePage').style.display = 'block';
+                    tabs[0].classList.add('active');
+                    loadServices();
+                    break;
+                case 'services':
+                    document.getElementById('servicesPage').style.display = 'block';
+                    tabs[1].classList.add('active');
+                    loadServicesPage();
+                    break;
+                case 'bookings':
+                    document.getElementById('bookingsPage').style.display = 'block';
+                    tabs[2].classList.add('active');
+                    loadBookings();
+                    break;
+                case 'admin':
+                    if (userRole === 'admin' || userRole === 'owner') {
+                        document.getElementById('adminPage').style.display = 'block';
+                        tabs[3].classList.add('active');
+                        loadAdminData();
+                    }
+                    break;
+            }
+        }
+
+        function showAdminSection(section) {
+            // Hide all sections
+            document.getElementById('usersSection').style.display = 'none';
+            document.getElementById('categoriesSection').style.display = 'none';
+            document.getElementById('servicesAdminSection').style.display = 'none';
+            
+            // Show selected section
+            switch(section) {
+                case 'users':
+                    if (checkPermission('manageUsers')) {
+                        document.getElementById('usersSection').style.display = 'block';
+                        loadUsers();
+                    }
+                    break;
+                case 'categories':
+                    if (checkPermission('manageCategories')) {
+                        document.getElementById('categoriesSection').style.display = 'block';
+                        loadCategories();
+                    }
+                    break;
+                case 'services':
+                    if (checkPermission('manageServices')) {
+                        document.getElementById('servicesAdminSection').style.display = 'block';
+                        loadServicesAdmin();
+                    }
+                    break;
+            }
+        }
+
+        // Permission Check
+        function checkPermission(permission) {
+            if (userRole === 'owner') return true;
+            return userPermissions[permission] === true;
+        }
+
+        // Modal Functions
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        function toggleDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('dropdownMenu');
+            const avatar = document.querySelector('.user-avatar');
+            if (!avatar.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Show/Hide Functions
+        function showAuth() {
+            document.getElementById('authContainer').style.display = 'block';
+            document.getElementById('appContainer').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            showPage('home');
+        }
+
+        // Notification Function
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Load Services from Realtime Database
+        async function loadServices() {
+            try {
+                const servicesRef = database.ref('services');
+                servicesRef.limitToFirst(6).once('value').then((snapshot) => {
+                    const servicesGrid = document.getElementById('servicesGrid');
+                    servicesGrid.innerHTML = '';
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const service = childSnapshot.val();
+                        const serviceCard = `
+                            <div class="service-card" onclick="showServiceDetail('${childSnapshot.key}')">
+                                <div class="service-icon">
+                                    <i class="fas fa-spa"></i>
+                                </div>
+                                <h4>${service.name}</h4>
+                                <p>₹${service.price}</p>
+                            </div>
+                        `;
+                        servicesGrid.innerHTML += serviceCard;
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading services:', error);
+            }
+        }
+
+        async function loadServicesPage() {
+            try {
+                const servicesRef = database.ref('services');
+                servicesRef.once('value').then((snapshot) => {
+                    const servicesList = document.getElementById('servicesList');
+                    servicesList.innerHTML = '';
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const service = childSnapshot.val();
+                        const serviceCard = `
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>${service.name}</h4>
+                                    <span class="price">₹${service.price}</span>
+                                </div>
+                                <p>${service.description || 'No description available'}</p>
+                                <p><strong>Duration:</strong> ${service.duration || 60} minutes</p>
+                                <button class="cta-button" style="margin-top: 10px;" onclick="bookService('${childSnapshot.key}')">
+                                    Book Now
+                                </button>
+                            </div>
+                        `;
+                        servicesList.innerHTML += serviceCard;
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading services:', error);
+                showNotification('Error loading services', 'error');
+            }
+        }
+
+        // Load Categories from Realtime Database
+        async function loadCategories() {
+            try {
+                const categoriesRef = database.ref('categories');
+                categoriesRef.once('value').then((snapshot) => {
+                    const categoriesList = document.getElementById('categoriesList');
+                    categoriesList.innerHTML = '';
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const category = childSnapshot.val();
+                        const categoryCard = `
+                            <div class="card">
+                                <div class="card-header">
+                                    <div>
+                                        <i class="${category.icon || 'fas fa-spa'}"></i>
+                                        <h4 style="display: inline; margin-left: 10px;">${category.name}</h4>
+                                    </div>
+                                    <div class="card-actions">
+                                        ${checkPermission('manageCategories') ? `<button class="action-btn edit-btn" onclick="editCategory('${childSnapshot.key}')">Edit</button>` : ''}
+                                        ${checkPermission('manageCategories') ? `<button class="action-btn delete-btn" onclick="deleteCategory('${childSnapshot.key}')">Delete</button>` : ''}
+                                    </div>
+                                </div>
+                                <p>${category.description || 'No description'}</p>
+                            </div>
+                        `;
+                        categoriesList.innerHTML += categoryCard;
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                showNotification('Error loading categories', 'error');
+            }
+        }
+
+        // Load Users from Realtime Database
+        async function loadUsers() {
+            try {
+                const usersRef = database.ref('users');
+                usersRef.once('value').then((snapshot) => {
+                    const usersList = document.getElementById('usersList');
+                    usersList.innerHTML = '';
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const user = childSnapshot.val();
+                        if (user.role !== 'owner' && childSnapshot.key !== currentUser.uid) {
+                            const userCard = `
+                                <div class="card">
+                                    <div class="card-header">
+                                        <div>
+                                            <h4>${user.name}</h4>
+                                            <p style="color: #666; font-size: 14px;">${user.email}</p>
+                                            <span class="role-badge" style="background: ${user.role === 'admin' ? '#ff6b8b' : '#4CAF50'}; color: white; padding: 3px 10px; border-radius: 15px; font-size: 12px;">
+                                                ${user.role}
+                                            </span>
+                                        </div>
+                                        <div class="card-actions">
+                                            ${userRole === 'owner' ? `<button class="action-btn edit-btn" onclick="editUser('${childSnapshot.key}')">Edit</button>` : ''}
+                                            ${userRole === 'owner' ? `<button class="action-btn delete-btn" onclick="deleteUser('${childSnapshot.key}')">Delete</button>` : ''}
+                                        </div>
+                                    </div>
+                                    <p><strong>Permissions:</strong> ${user.permissions ? Object.keys(user.permissions).filter(p => user.permissions[p]).join(', ') : 'None'}</p>
+                                </div>
+                            `;
+                            usersList.innerHTML += userCard;
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showNotification('Error loading users', 'error');
+            }
+        }
+
+        // Admin Functions for Realtime Database
+        async function saveAdminUser() {
+            if (userRole !== 'owner') {
+                showNotification('Only owner can add admin users', 'error');
+                return;
+            }
+            
+            const name = document.getElementById('adminUserName').value;
+            const email = document.getElementById('adminUserEmail').value;
+            const password = document.getElementById('adminUserPassword').value;
+            
+            if (!name || !email || !password) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+            
+            try {
+                // Create user in Firebase Auth
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                await userCredential.user.updateProfile({ displayName: name });
+                
+                // Get selected permissions
+                const permissions = {};
+                if (document.getElementById('permManageUsers').checked) permissions.manageUsers = true;
+                if (document.getElementById('permManageCategories').checked) permissions.manageCategories = true;
+                if (document.getElementById('permManageServices').checked) permissions.manageServices = true;
+                if (document.getElementById('permManageBookings').checked) permissions.manageBookings = true;
+                
+                // Create user in Realtime Database
+                await database.ref('users/' + userCredential.user.uid).set({
+                    name: name,
+                    email: email,
+                    role: 'admin',
+                    permissions: permissions,
+                    createdAt: Date.now()
+                });
+                
+                showNotification('Admin user created successfully', 'success');
+                closeModal('addUserModal');
+                loadUsers();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function saveCategory() {
+            if (!checkPermission('manageCategories')) {
+                showNotification('You do not have permission to manage categories', 'error');
+                return;
+            }
+            
+            const name = document.getElementById('categoryName').value;
+            const description = document.getElementById('categoryDescription').value;
+            const icon = document.getElementById('categoryIcon').value;
+            
+            if (!name) {
+                showNotification('Category name is required', 'error');
+                return;
+            }
+            
+            try {
+                const newCategoryRef = database.ref('categories').push();
+                await newCategoryRef.set({
+                    name: name,
+                    description: description,
+                    icon: icon || 'fas fa-spa',
+                    createdBy: currentUser.uid,
+                    createdAt: Date.now()
+                });
+                
+                showNotification('Category added successfully', 'success');
+                closeModal('addCategoryModal');
+                loadCategories();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function saveService() {
+            if (!checkPermission('manageServices')) {
+                showNotification('You do not have permission to manage services', 'error');
+                return;
+            }
+            
+            const name = document.getElementById('serviceName').value;
+            const description = document.getElementById('serviceDescription').value;
+            const price = document.getElementById('servicePrice').value;
+            const duration = document.getElementById('serviceDuration').value;
+            const category = document.getElementById('serviceCategory').value;
+            
+            if (!name || !price || !category) {
+                showNotification('Please fill all required fields', 'error');
+                return;
+            }
+            
+            try {
+                const newServiceRef = database.ref('services').push();
+                await newServiceRef.set({
+                    name: name,
+                    description: description,
+                    price: parseFloat(price),
+                    duration: parseInt(duration) || 60,
+                    category: category,
+                    createdBy: currentUser.uid,
+                    createdAt: Date.now()
+                });
+                
+                showNotification('Service added successfully', 'success');
+                closeModal('addServiceModal');
+                loadServicesAdmin();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (userRole !== 'owner') {
+                showNotification('Only owner can delete users', 'error');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete this user?')) {
+                try {
+                    await database.ref('users/' + userId).remove();
+                    showNotification('User deleted successfully', 'success');
+                    loadUsers();
+                } catch (error) {
+                    showNotification(error.message, 'error');
+                }
+            }
+        }
+
+        async function deleteCategory(categoryId) {
+            if (!checkPermission('manageCategories')) {
+                showNotification('You do not have permission to delete categories', 'error');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete this category?')) {
+                try {
+                    await database.ref('categories/' + categoryId).remove();
+                    showNotification('Category deleted successfully', 'success');
+                    loadCategories();
+                } catch (error) {
+                    showNotification(error.message, 'error');
+                }
+            }
+        }
+
+        // Show Modals
+        function showAddUserModal() {
+            if (userRole !== 'owner') {
+                showNotification('Only owner can add admin users', 'error');
+                return;
+            }
+            showModal('addUserModal');
+        }
+
+        function showAddCategoryModal() {
+            if (!checkPermission('manageCategories')) {
+                showNotification('You do not have permission to add categories', 'error');
+                return;
+            }
+            showModal('addCategoryModal');
+        }
+
+        function showAddServiceModal() {
+            if (!checkPermission('manageServices')) {
+                showNotification('You do not have permission to add services', 'error');
+                return;
+            }
+            
+            // Load categories for dropdown
+            loadCategoriesForServiceModal();
+            showModal('addServiceModal');
+        }
+
+        async function loadCategoriesForServiceModal() {
+            try {
+                const categoriesRef = database.ref('categories');
+                categoriesRef.once('value').then((snapshot) => {
+                    const select = document.getElementById('serviceCategory');
+                    select.innerHTML = '<option value="">Select Category</option>';
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const option = document.createElement('option');
+                        option.value = childSnapshot.key;
+                        option.textContent = childSnapshot.val().name;
+                        select.appendChild(option);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Profile Functions
+        async function showProfile() {
+            try {
+                const userRef = database.ref('users/' + currentUser.uid);
+                userRef.once('value').then((snapshot) => {
+                    const userData = snapshot.val();
+                    
+                    const profileContent = document.getElementById('profileContent');
+                    profileContent.innerHTML = `
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="profileName" value="${userData.name || ''}" placeholder="Enter full name">
+                        </div>
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" value="${userData.email || ''}" disabled style="background: #f5f5f5;">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="tel" id="profilePhone" value="${userData.phone || ''}" placeholder="Enter phone number">
+                        </div>
+                        <div class="form-actions">
+                            <button class="submit-btn" onclick="updateProfile()">Update Profile</button>
+                            <button class="cancel-btn" onclick="closeModal('profileModal')">Cancel</button>
+                        </div>
+                    `;
+                    
+                    showModal('profileModal');
+                });
+            } catch (error) {
+                showNotification('Error loading profile', 'error');
+            }
+        }
+
+        async function updateProfile() {
+            const name = document.getElementById('profileName').value;
+            const phone = document.getElementById('profilePhone').value;
+            
+            try {
+                await database.ref('users/' + currentUser.uid).update({
+                    name: name,
+                    phone: phone,
+                    updatedAt: Date.now()
+                });
+                
+                document.getElementById('userName').textContent = name;
+                showNotification('Profile updated successfully', 'success');
+                closeModal('profileModal');
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        // Load Admin Data from Realtime Database
+        async function loadAdminData() {
+            try {
+                // Load stats
+                const usersRef = database.ref('users');
+                const servicesRef = database.ref('services');
+                const categoriesRef = database.ref('categories');
+                
+                Promise.all([
+                    usersRef.once('value'),
+                    servicesRef.once('value'),
+                    categoriesRef.once('value')
+                ]).then(([usersSnapshot, servicesSnapshot, categoriesSnapshot]) => {
+                    const usersCount = usersSnapshot.numChildren();
+                    const servicesCount = servicesSnapshot.numChildren();
+                    const categoriesCount = categoriesSnapshot.numChildren();
+                    
+                    const adminStats = document.getElementById('adminStats');
+                    adminStats.innerHTML = `
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
+                            <div style="text-align: center; background: #f0f7ff; padding: 15px; border-radius: 10px;">
+                                <h3 style="color: var(--primary);">${usersCount}</h3>
+                                <p>Total Users</p>
+                            </div>
+                            <div style="text-align: center; background: #f0f7ff; padding: 15px; border-radius: 10px;">
+                                <h3 style="color: var(--primary);">${servicesCount}</h3>
+                                <p>Services</p>
+                            </div>
+                            <div style="text-align: center; background: #f0f7ff; padding: 15px; border-radius: 10px;">
+                                <h3 style="color: var(--primary);">${categoriesCount}</h3>
+                                <p>Categories</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error loading admin data:', error);
+            }
+        }
+
+        // Load Services for Admin
+        async function loadServicesAdmin() {
+            try {
+                const servicesRef = database.ref('services');
+                servicesRef.once('value').then((snapshot) => {
+                    const servicesList = document.getElementById('servicesAdminList');
+                    servicesList.innerHTML = '';
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const service = childSnapshot.val();
+                        const serviceCard = `
+                            <div class="card">
+                                <div class="card-header">
+                                    <div>
+                                        <h4>${service.name}</h4>
+                                        <p style="color: #666; font-size: 14px;">₹${service.price} • ${service.duration || 60} min</p>
+                                    </div>
+                                    <div class="card-actions">
+                                        ${checkPermission('manageServices') ? `<button class="action-btn edit-btn">Edit</button>` : ''}
+                                        ${checkPermission('manageServices') ? `<button class="action-btn delete-btn" onclick="deleteService('${childSnapshot.key}')">Delete</button>` : ''}
+                                    </div>
+                                </div>
+                                <p>${service.description || 'No description available'}</p>
+                            </div>
+                        `;
+                        servicesList.innerHTML += serviceCard;
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading services:', error);
+                showNotification('Error loading services', 'error');
+            }
+        }
+
+        // Delete Service
+        async function deleteService(serviceId) {
+            if (!checkPermission('manageServices')) {
+                showNotification('You do not have permission to delete services', 'error');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete this service?')) {
+                try {
+                    await database.ref('services/' + serviceId).remove();
+                    showNotification('Service deleted successfully', 'success');
+                    loadServicesAdmin();
+                } catch (error) {
+                    showNotification(error.message, 'error');
+                }
+            }
+        }
+
+        // Load Bookings
+        async function loadBookings() {
+            try {
+                const bookingsRef = database.ref('bookings').orderByChild('userId').equalTo(currentUser.uid);
+                bookingsRef.once('value').then((snapshot) => {
+                    const bookingsList = document.getElementById('bookingsList');
+                    bookingsList.innerHTML = '';
+                    
+                    if (!snapshot.exists()) {
+                        bookingsList.innerHTML = '<p>No bookings yet. Book your first service!</p>';
+                        return;
+                    }
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const booking = childSnapshot.val();
+                        const bookingCard = `
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>${booking.serviceName || 'Service'}</h4>
+                                    <span class="status" style="background: ${booking.status === 'confirmed' ? '#4CAF50' : booking.status === 'pending' ? '#ff9800' : '#f44336'}; color: white; padding: 3px 10px; border-radius: 15px; font-size: 12px;">
+                                        ${booking.status || 'pending'}
+                                    </span>
+                                </div>
+                                <p><strong>Date:</strong> ${new Date(booking.date).toLocaleDateString()}</p>
+                                <p><strong>Time:</strong> ${booking.time}</p>
+                                <p><strong>Amount:</strong> ₹${booking.amount || 0}</p>
+                            </div>
+                        `;
+                        bookingsList.innerHTML += bookingCard;
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                showNotification('Error loading bookings', 'error');
+            }
+        }
+
+        // Book a Service
+        async function bookService(serviceId) {
+            try {
+                const serviceRef = database.ref('services/' + serviceId);
+                serviceRef.once('value').then((snapshot) => {
+                    const service = snapshot.val();
+                    if (service) {
+                        if (confirm(`Book ${service.name} for ₹${service.price}?`)) {
+                            const newBookingRef = database.ref('bookings').push();
+                            newBookingRef.set({
+                                serviceId: serviceId,
+                                serviceName: service.name,
+                                userId: currentUser.uid,
+                                userName: document.getElementById('userName').textContent,
+                                amount: service.price,
+                                status: 'pending',
+                                date: Date.now(),
+                                createdAt: Date.now()
+                            }).then(() => {
+                                showNotification('Booking created successfully!', 'success');
+                                loadBookings();
+                                showPage('bookings');
+                            });
+                        }
+                    }
+                });
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        // Initialize Owner Account
+        async function initializeOwnerAccount() {
+            const ownerEmail = 'owner@glamcare.com';
+            const ownerPassword = 'Owner@123';
+            
+            try {
+                // Try to sign in first
+                await auth.signInWithEmailAndPassword(ownerEmail, ownerPassword).catch(async () => {
+                    // Create owner if doesn't exist
+                    const userCredential = await auth.createUserWithEmailAndPassword(ownerEmail, ownerPassword);
+                    await userCredential.user.updateProfile({ displayName: 'Owner' });
+                    
+                    // Create owner in Realtime Database
+                    await database.ref('users/' + userCredential.user.uid).set({
+                        name: 'Owner',
+                        email: ownerEmail,
+                        role: 'owner',
+                        permissions: {
+                            manageUsers: true,
+                            manageCategories: true,
+                            manageServices: true,
+                            manageBookings: true
+                        },
+                        createdAt: Date.now()
+                    });
+                    
+                    // Sign out after creating owner
+                    await auth.signOut();
+                });
+                
+                console.log('Owner account initialized');
+            } catch (error) {
+                console.error('Error initializing owner account:', error);
+            }
+        }
+
+        // Initialize owner account on first load
+        setTimeout(initializeOwnerAccount, 2000);
+    </script>
+</body>
+</html>
