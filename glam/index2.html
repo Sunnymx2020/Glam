@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Glam  — Beauty Parlour (mobile)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    :root{--bg:#fff8fb;--card:#fff;--accent:#ff3b8a;--muted:#8a8a8f;--radius:16px;font-family:Inter,system-ui,Roboto,Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#fff8fb 0%, #fff 60%);} 
+    .app{max-width:420px;margin:0 auto;min-height:100vh}
+    header{padding:12px 14px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:700;color:var(--accent);font-size:18px}
+    main{padding:8px 12px 120px}
+    .card{background:var(--card);border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(20,20,20,0.04)}
+    .form-row{display:flex;flex-direction:column;gap:8px}
+    input[type=email],input[type=password],input[type=text],textarea,select{width:100%;padding:10px;border-radius:12px;border:1px solid #f1e6ee;background:transparent}
+    button.primary{width:100%;padding:12px;border-radius:12px;border:0;background:var(--accent);color:white;font-weight:600}
+    .link-like{color:var(--accent);font-weight:600;cursor:pointer;background:none;border:0}
+    .avatar{width:70px;height:70px;border-radius:18px;background:linear-gradient(135deg,#ffd7e6,#fff);display:flex;align-items:center;justify-content:center;font-weight:700}
+    .small{font-size:13px;color:var(--muted)}
+    .product{display:flex;gap:10px;align-items:center}
+    .product img{width:64px;height:64px;border-radius:12px;object-fit:cover}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .tile{background:linear-gradient(180deg, rgba(255,59,138,0.06), rgba(255,255,255,0.2));padding:12px;border-radius:12px;text-align:center}
+    footer.bottom-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:420px;padding:10px;background:transparent}
+    .nav-row{display:flex;justify-content:space-between;gap:8px}
+    .nav-btn{flex:1;padding:12px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;gap:8px}
+    .badge{background:linear-gradient(90deg,#ffeef8,#fff);color:var(--accent);padding:6px 8px;border-radius:999px;font-weight:600;font-size:12px}
+    .banner{width:100%;height:140px;border-radius:12px;overflow:hidden;position:relative;background:#ffeef6}
+    .banner img{width:100%;height:100%;object-fit:cover}
+    .search{display:flex;gap:8px;align-items:center}
+    .muted{color:var(--muted)}
+    .center{text-align:center}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg,#ffd7e6,#ffecf6)">YM</div>
+        <div>
+          <div class="brand">Yes Madam</div>
+          <div class="small">Beauty Parlour</div>
+        </div>
+      </div>
+    </header>
+
+    <main id="screen"></main>
+
+    <footer class="bottom-nav">
+      <div class="nav-row">
+        <button class="nav-btn" id="nav-home"><span class="material-icons">home</span></button>
+        <button class="nav-btn" id="nav-bookings"><span class="material-icons">calendar_today</span></button>
+        <button class="nav-btn" id="nav-admin"><span class="material-icons">settings</span></button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase compat SDKs for simple code (works in older WebViews) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <script>
+    // BEAUTY PARLOUR APP - Single file, full features (ES5 compatible)
+
+    var OWNER_EMAIL = 'sunnymavale@gmail.com';
+
+    var firebaseConfig = {
+      apiKey: "AIzaSyDlFYwKIcsI2yNL6iaGJINJKEB_CrRZ_iI",
+      authDomain: "chatme-a3ef7.firebaseapp.com",
+      databaseURL: "https://chatme-a3ef7-default-rtdb.firebaseio.com",
+      projectId: "chatme-a3ef7",
+      storageBucket: "chatme-a3ef7.firebasestorage.app",
+      messagingSenderId: "47843223818",
+      appId: "1:47843223818:web:e08c02c6e52bce2c51b2f3"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    var auth = firebase.auth();
+    var db = firebase.database();
+    var storage = firebase.storage();
+
+    var screen = document.getElementById('screen');
+    var currentUser = null; var currentProfile = null;
+    var banners = []; var categoriesCache = {}; var productsCache = {};
+
+    function toast(msg){
+      var t = document.createElement('div'); t.textContent = msg; t.style.position='fixed'; t.style.left='50%'; t.style.transform='translateX(-50%)'; t.style.bottom='120px'; t.style.background='rgba(0,0,0,0.8)'; t.style.color='#fff'; t.style.padding='10px 14px'; t.style.borderRadius='12px'; t.style.zIndex=9999; document.body.appendChild(t); setTimeout(function(){ try{ document.body.removeChild(t);}catch(e){} },3000);
+    }
+
+    // Auth listener
+    auth.onAuthStateChanged(function(user){
+      currentUser = user;
+      if(user){
+        db.ref('users/' + user.uid).once('value').then(function(snap){ currentProfile = snap.val() || { displayName: user.email }; loadHomeData(); }).catch(function(){ currentProfile = { displayName: user.email }; loadHomeData(); });
+      } else { currentProfile = null; renderLogin(); }
+    });
+
+    // Load data caches
+    function loadHomeData(){
+      Promise.all([
+        db.ref('banners').once('value'),
+        db.ref('categories').once('value'),
+        db.ref('products').once('value')
+      ]).then(function(results){
+        var b = results[0].val(); banners = b || [];
+        categoriesCache = results[1].val() || {};
+        productsCache = results[2].val() || {};
+        // normalize banners
+        if(b && !(b instanceof Array)){
+          var tmp=[]; for(var k in b){ tmp.push(b[k]); } banners = tmp;
+        }
+        renderHome();
+      }).catch(function(err){ console.error(err); renderHome(); });
+    }
+
+    function isOwnerByEmail(){ return currentUser && currentUser.email === OWNER_EMAIL; }
+    function isOwnerByMeta(uid){ return db.ref('meta/ownerUid').once('value').then(function(snap){ return snap.val() === uid; }); }
+    function getAdminRecord(uid){ return db.ref('admins/' + uid).once('value').then(function(snap){ return snap.val(); }); }
+
+    // --- RENDER: LOGIN ---
+    function renderLogin(){
+      var html = '';
+      html += '<div class="card center">';
+      html += '<h2>Yes Madam</h2>';
+      html += '<div class="small">Sign in to book & manage</div>';
+      html += '</div>';
+      html += '<div class="card">';
+      html += '<div class="form-row">';
+      html += '<input id="login-email" placeholder="Email" type="email" />';
+      html += '<input id="login-pass" placeholder="Password" type="password" />';
+      html += '<button class="primary" id="btn-login">Login</button>';
+      html += '<button class="link-like" id="show-signup">Create account</button>';
+      html += '</div></div>';
+      screen.innerHTML = html;
+
+      document.getElementById('btn-login').onclick = function(){ var e=document.getElementById('login-email').value; var p=document.getElementById('login-pass').value; auth.signInWithEmailAndPassword(e,p).catch(function(err){ toast(err.message); }); };
+      document.getElementById('show-signup').onclick = function(){ renderSignup(); };
+    }
+
+    function renderSignup(){
+      var html = '';
+      html += '<div class="card">'; html += '<h3>Create Account</h3>'; html += '<div class="form-row">';
+      html += '<input id="su-name" placeholder="Your name" />';
+      html += '<input id="su-email" placeholder="Email" type="email" />';
+      html += '<input id="su-pass" placeholder="Password (6+ chars)" type="password" />';
+      html += '<button class="primary" id="btn-signup">Sign up</button>';
+      html += '<button class="link-like" id="back-login">Back to login</button>';
+      html += '</div></div>';
+      screen.innerHTML = html;
+      document.getElementById('btn-signup').onclick = function(){ var n=document.getElementById('su-name').value; var e=document.getElementById('su-email').value; var p=document.getElementById('su-pass').value; auth.createUserWithEmailAndPassword(e,p).then(function(cred){ var uid=cred.user.uid; db.ref('users/'+uid).set({ displayName: n||e, email: e, role: 'user', createdAt: Date.now() }).then(function(){ toast('Account created'); }).catch(function(err){ toast(err.message); }); }).catch(function(err){ toast(err.message); }); };
+      document.getElementById('back-login').onclick = function(){ renderLogin(); };
+    }
+
+    // --- RENDER: HOME ---
+    function renderHome(){
+      var adminRec = currentProfile && currentProfile.admin;
+      var isOwnerFlag = (currentProfile && currentProfile.isOwner) || isOwnerByEmail();
+      var html = '';
+
+      // Banner
+      html += '<div class="card banner">';
+      if(banners && banners.length){ html += '<img id="banner-img" src="'+(banners[0].image||banners[0])+'" onerror="this.src=\'https://via.placeholder.com/800x300\'" />'; }
+      else { html += '<div style="padding:18px;text-align:center">No banners — add from Admin</div>'; }
+      html += '</div>';
+
+      // Search
+      html += '<div class="card"><div class="search"><input id="search-input" placeholder="Search services or tags"/><button class="link-like" id="search-btn">Search</button></div></div>';
+
+      // Categories
+      html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700">Categories</div><div class="small muted">Tap to view</div></div><div style="height:8px"></div><div class="grid">';
+      var anyCat=false;
+      for(var c in categoriesCache){ anyCat=true; var cat = categoriesCache[c]; html += '<div class="tile"><div style="font-weight:700">'+cat.title+'</div><div class="small">'+(cat.desc||'')+'</div><div style="height:6px"></div><button class="link-like" onclick="viewCategory(\''+c+'\')">Open</button></div>'; }
+      if(!anyCat) html += '<div class="center">No categories yet</div>';
+      html += '</div></div>';
+
+      // Featured services
+      html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700">Featured Services</div><div class="small muted">Top picks</div></div><div style="height:8px"></div>';
+      var count=0;
+      for(var p in productsCache){ if(count>=6) break; var pr=productsCache[p]; html += '<div class="product"><img src="'+(pr.image||'')+'" onerror="this.src=\'https://via.placeholder.com/120\'"/><div style="flex:1"><div style="font-weight:700">'+pr.title+'</div><div class="small">₹'+(pr.price||0)+' • '+(pr.duration||'30m')+'</div></div><div><button class="link-like" onclick="openService(\''+p+'\')">View</button></div></div>'; count++; }
+      html += '</div>';
+
+      screen.innerHTML = html;
+
+      // banner rotate
+      (function(){ var idx=0; var bimg=document.getElementById('banner-img'); if(!bimg) return; setInterval(function(){ if(!banners || !banners.length) return; idx = (idx+1) % banners.length; try{ bimg.src = banners[idx].image || banners[idx]; }catch(e){} }, 4000); })();
+
+      document.getElementById('search-btn').onclick = function(){ var q=document.getElementById('search-input').value.trim().toLowerCase(); if(!q){ renderHome(); return; } searchProducts(q); };
+    }
+
+    function searchProducts(q){
+      var results=[];
+      for(var pid in productsCache){ var pr = productsCache[pid]; var title=(pr.title||'').toLowerCase(); var tags=(pr.tags||'').toLowerCase(); if(title.indexOf(q)!==-1 || tags.indexOf(q)!==-1) results.push({id:pid,data:pr}); }
+      var html = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700">Search results</div><div><button class="link-like" id="back-home-s">Back</button></div></div></div>';
+      if(!results.length) html += '<div class="card">No results</div>';
+      else{ for(var i=0;i<results.length;i++){ var r=results[i]; html += '<div class="card product"><img src="'+(r.data.image||'')+'" onerror="this.src=\'https://via.placeholder.com/120\'"/><div style="flex:1"><div style="font-weight:700">'+r.data.title+'</div><div class="small">₹'+(r.data.price||0)+' • '+(r.data.duration||'30m')+'</div></div><div><button class="link-like" onclick="openService(\''+r.id+'\')">View</button></div></div>'; } }
+      screen.innerHTML = html; var back=document.getElementById('back-home-s'); if(back) back.onclick=function(){ renderHome(); };
+    }
+
+    window.viewCategory = function(cid){ db.ref('categories/'+cid).once('value').then(function(catSnap){ var cat = catSnap.val()||{title:'Category'}; db.ref('products').orderByChild('category').equalTo(cid).once('value').then(function(psnap){ var prods = psnap.val()||{}; var html=''; html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">'+cat.title+'</div><div class="small">'+(cat.desc||'')+'</div></div><div><button class="link-like" id="back-cats">Back</button></div></div></div>'; for(var pid in prods){ var p=prods[pid]; html += '<div class="card product"><img src="'+(p.image||'')+'" onerror="this.src=\'https://via.placeholder.com/120\'"/><div style="flex:1"><div style="font-weight:700">'+p.title+'</div><div class="small">₹'+(p.price||0)+' • '+(p.duration||'30m')+'</div></div><div><button class="link-like" onclick="openService(\''+pid+'\')">View</button></div></div>'; } screen.innerHTML = html; var backCats=document.getElementById('back-cats'); if(backCats) backCats.onclick=function(){ renderHome(); }; }); }); };
+
+    window.openService = function(pid){ db.ref('products/'+pid).once('value').then(function(snap){ var p = snap.val()||{}; var html = ''; html += '<div class="card">'; html += '<div style="display:flex;gap:12px;align-items:center"><img src="'+(p.image||'')+'" style="width:96px;height:96px;border-radius:12px;object-fit:cover" onerror="this.src=\'https://via.placeholder.com/120\'"/><div style="flex:1"><div style="font-weight:700">'+p.title+'</div><div class="small">₹'+(p.price||0)+' • '+(p.duration||'30m')+'</div></div></div>'; html += '<div style="height:10px"></div>'; html += '<div class="small">'+(p.description||'')+'</div>'; html += '<div style="height:12px"></div>'; html += '<button class="primary" id="book-now">Book Now</button>'; html += '<button class="link-like" id="back-to-home">Back</button>'; html += '</div>'; screen.innerHTML = html; document.getElementById('back-to-home').onclick = function(){ renderHome(); }; document.getElementById('book-now').onclick = function(){ if(!currentUser){ toast('Please login to book'); renderLogin(); return; } var bRef = db.ref('bookings').push(); bRef.set({ userId: currentUser.uid, productId: pid, productTitle: p.title, createdAt: Date.now(), status: 'pending' }).then(function(){ toast('Booking requested'); renderHome(); }); }; }); };
+
+    // Admin panel: manage banners, categories, products, admins
+    function renderAdminPanel(){ if(!currentUser){ toast('Login required'); renderLogin(); return; } getAdminRecord(currentUser.uid).then(function(adminRec){ isOwnerByMeta(currentUser.uid).then(function(ownerMeta){ var isOwnerFlag = ownerMeta || isOwnerByEmail(); if(!isOwnerFlag && !adminRec){ toast('Admins only'); return; }
+
+      var html = '';
+      html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">Admin Panel</div><div class="small">Manage banners, categories & services</div></div><div><button class="link-like" id="back-home2">Back</button></div></div></div>';
+
+      if(isOwnerFlag){ html += '<div class="card"> <h4>Owner - Manage Admins</h4><div id="admins-list"></div><div style="height:8px"></div><div style="display:flex;gap:8px"><input id="new-admin-email" placeholder="Existing user email or uid"/><button class="link-like" id="btn-add-admin">Add Admin</button></div></div>'; }
+
+      html += '<div class="card"><h4>Banners</h4><div id="banners-admin"></div><div style="height:8px"></div><input id="new-banner-title" placeholder="Banner title"/><input id="new-banner-image" type="file" accept="image/*"/><button class="link-like" id="btn-add-banner">Add Banner</button></div>';
+
+      html += '<div class="card"><h4>Categories</h4><div id="cats-admin"></div><div style="height:8px"></div><input id="new-cat-title" placeholder="Category title"/><input id="new-cat-desc" placeholder="Short description"/><button class="link-like" id="btn-add-cat">Add Category</button></div>';
+
+      html += '<div class="card"><h4>Services</h4><div id="prods-admin"></div><div style="height:8px"></div><select id="prod-cat-select"></select><input id="new-prod-title" placeholder="Service title"/><input id="new-prod-price" placeholder="Price"/><input id="new-prod-duration" placeholder="Duration e.g. 30m"/><input id="new-prod-tags" placeholder="Tags (comma)"/><input id="new-prod-image" type="file" accept="image/*"/><textarea id="new-prod-desc" placeholder="Description"></textarea><button class="link-like" id="btn-add-prod">Add Service</button></div>';
+
+      screen.innerHTML = html; var backHome2=document.getElementById('back-home2'); if(backHome2) backHome2.onclick=function(){ renderHome(); };
+
+      if(isOwnerFlag){ loadAdminsList(); var btnAddAdmin=document.getElementById('btn-add-admin'); if(btnAddAdmin) btnAddAdmin.onclick=function(){ var val=document.getElementById('new-admin-email').value.trim(); if(!val){ toast('Enter uid or email'); return; } db.ref('users').orderByChild('email').equalTo(val).once('value').then(function(usersByEmail){ var uid = val; if(usersByEmail.exists()){ var o = usersByEmail.val(); for(var k in o){ uid = k; break; } } db.ref('admins/'+uid).set({ displayName: val, permissions: { manageCategories: true, manageServices: true, manageBookings: true, manageBanners: true } }).then(function(){ toast('Admin added'); loadAdminsList(); }); }); }; }
+
+      var btnAddBanner=document.getElementById('btn-add-banner'); if(btnAddBanner) btnAddBanner.onclick=function(){ var title=document.getElementById('new-banner-title').value.trim(); var fileInput=document.getElementById('new-banner-image'); if(!fileInput || !fileInput.files.length){ toast('Select an image'); return; } var f=fileInput.files[0]; var key='banners/'+Date.now()+'_'+f.name; storage.ref(key).put(f).then(function(up){ up.ref.getDownloadURL().then(function(url){ db.ref('banners').push().set({ title: title, image: url, createdAt: Date.now() }).then(function(){ toast('Banner added'); loadHomeData(); loadBannersAdmin(); }); }); }); };
+
+      var btnAddCat=document.getElementById('btn-add-cat'); if(btnAddCat) btnAddCat.onclick=function(){ var t=document.getElementById('new-cat-title').value.trim(); var d=document.getElementById('new-cat-desc').value.trim(); if(!t){ toast('Enter title'); return; } db.ref('categories').push().set({ title: t, desc: d, createdAt: Date.now() }).then(function(){ toast('Category added'); loadCatsAdmin(); loadHomeData(); }); };
+
+      var btnAddProd=document.getElementById('btn-add-prod'); if(btnAddProd) btnAddProd.onclick=function(){ var title=document.getElementById('new-prod-title').value.trim(); var price=parseFloat(document.getElementById('new-prod-price').value||0); var duration=document.getElementById('new-prod-duration').value.trim(); var tags=document.getElementById('new-prod-tags').value.
